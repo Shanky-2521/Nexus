@@ -93,6 +93,37 @@ functions:
               querystrings:
                 timeFrame: false
 
+  getTopPlayersWithQuery:
+    handler: src/handlers/getTopPlayers.handlerWithQueryCount
+    description: Get top N players with count as query parameter
+    events:
+      - http:
+          path: /leaderboard/{gameId}/top
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                gameId: true
+              querystrings:
+                count: false
+                timeFrame: false
+
+  getTopPlayersWithTimeFrame:
+    handler: src/handlers/getTopPlayers.handlerWithTimeFrame
+    description: Get top N players with timeFrame in path
+    events:
+      - http:
+          path: /leaderboard/{gameId}/{timeFrame}/top/{count}
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                gameId: true
+                timeFrame: true
+                count: true
+
   getUserRank:
     handler: src/handlers/getUserRank.handler
     description: Get a user's rank and surrounding players

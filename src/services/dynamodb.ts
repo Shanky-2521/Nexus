@@ -209,4 +209,68 @@ export class DynamoDBService {
       throw new Error('Failed to get user rank');
     }
   }
+
+  /**
+   * Get total number of players in a leaderboard
+   */
+  async getTotalPlayerCount(gameId: string, timeFrame?: string): Promise<number> {
+    try {
+      const leaderboardTimeFrame = timeFrame || TimeFrameUtils.getCurrentWeek();
+      const pk = KeyPatterns.leaderboardPK(gameId, leaderboardTimeFrame);
+
+      const result = await this.client.send(new QueryCommand({
+        TableName: this.tableName,
+        IndexName: 'RankIndex',
+        KeyConditionExpression: 'PK = :pk',
+        ExpressionAttributeValues: {
+          ':pk': pk
+        },
+        Select: 'COUNT'
+      }));
+
+      return result.Count || 0;
+    } catch (error) {
+      console.error('Error getting total player count:', error);
+      throw new Error('Failed to get total player count');
+    }
+  }
+
+  /**
+   * Get players around a specific rank (for context queries)
+   */
+  async getPlayersAroundRank(
+    gameId: string,
+    targetRank: number,
+    contextSize: number = 5,
+    timeFrame?: string
+  ): Promise<LeaderboardEntry[]> {
+    try {
+      const leaderboardTimeFrame = timeFrame || TimeFrameUtils.getCurrentWeek();
+      const pk = KeyPatterns.leaderboardPK(gameId, leaderboardTimeFrame);
+
+      // Calculate the range to fetch
+      const startRank = Math.max(1, targetRank - contextSize);
+      const endRank = targetRank + contextSize;
+      const limit = endRank - startRank + 1;
+
+      // Get players starting from the calculated position
+      const result = await this.client.send(new QueryCommand({
+        TableName: this.tableName,
+        IndexName: 'RankIndex',
+        KeyConditionExpression: 'PK = :pk',
+        ExpressionAttributeValues: {
+          ':pk': pk
+        },
+        ScanIndexForward: false, // Sort by score descending
+        Limit: limit,
+        // Note: DynamoDB doesn't support OFFSET, so we'll need to implement
+        // pagination logic if we need to skip to a specific rank
+      }));
+
+      return result.Items as LeaderboardEntry[] || [];
+    } catch (error) {
+      console.error('Error getting players around rank:', error);
+      throw new Error('Failed to get players around rank');
+    }
+  }
 }
