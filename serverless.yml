@@ -38,7 +38,8 @@ custom:
   
 functions:
   submitScore:
-    handler: src/handlers/submitScore.handler
+    handler: src/handlers/submitScore.handlerWithPathParams
+    description: Submit a score for a specific game leaderboard
     events:
       - http:
           path: /leaderboard/{gameId}/score
@@ -48,9 +49,37 @@ functions:
             parameters:
               paths:
                 gameId: true
+            schema:
+              application/json:
+                type: object
+                properties:
+                  UserID:
+                    type: string
+                  PlayerName:
+                    type: string
+                  Score:
+                    type: number
+                  TimeFrame:
+                    type: string
+                  Metadata:
+                    type: object
+                required:
+                  - UserID
+                  - PlayerName
+                  - Score
+
+  submitScoreGeneric:
+    handler: src/handlers/submitScore.handler
+    description: Submit a score with GameID in request body
+    events:
+      - http:
+          path: /score
+          method: post
+          cors: true
 
   getTopPlayers:
     handler: src/handlers/getTopPlayers.handler
+    description: Get top N players for a leaderboard
     events:
       - http:
           path: /leaderboard/{gameId}/top/{count}
@@ -61,9 +90,12 @@ functions:
               paths:
                 gameId: true
                 count: true
+              querystrings:
+                timeFrame: false
 
   getUserRank:
     handler: src/handlers/getUserRank.handler
+    description: Get a user's rank and surrounding players
     events:
       - http:
           path: /leaderboard/{gameId}/user/{userId}/rank
@@ -74,9 +106,13 @@ functions:
               paths:
                 gameId: true
                 userId: true
+              querystrings:
+                timeFrame: false
+                contextSize: false
 
   getUserPercentile:
     handler: src/handlers/getUserPercentile.handler
+    description: Get a user's percentile ranking
     events:
       - http:
           path: /leaderboard/{gameId}/user/{userId}/percentile
@@ -87,6 +123,8 @@ functions:
               paths:
                 gameId: true
                 userId: true
+              querystrings:
+                timeFrame: false
 
 resources:
   Resources:
