@@ -1,0 +1,134 @@
+service: nexus-leaderboard
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  memorySize: 256
+  timeout: 30
+  environment:
+    LEADERBOARD_TABLE: ${self:custom.leaderboardTable}
+    STAGE: ${self:provider.stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchGetItem
+            - dynamodb:BatchWriteItem
+          Resource:
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.leaderboardTable}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.leaderboardTable}/index/*"
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline
+
+custom:
+  leaderboardTable: nexus-leaderboard-${self:provider.stage}
+  
+functions:
+  submitScore:
+    handler: src/handlers/submitScore.handler
+    events:
+      - http:
+          path: /leaderboard/{gameId}/score
+          method: post
+          cors: true
+          request:
+            parameters:
+              paths:
+                gameId: true
+
+  getTopPlayers:
+    handler: src/handlers/getTopPlayers.handler
+    events:
+      - http:
+          path: /leaderboard/{gameId}/top/{count}
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                gameId: true
+                count: true
+
+  getUserRank:
+    handler: src/handlers/getUserRank.handler
+    events:
+      - http:
+          path: /leaderboard/{gameId}/user/{userId}/rank
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                gameId: true
+                userId: true
+
+  getUserPercentile:
+    handler: src/handlers/getUserPercentile.handler
+    events:
+      - http:
+          path: /leaderboard/{gameId}/user/{userId}/percentile
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                gameId: true
+                userId: true
+
+resources:
+  Resources:
+    LeaderboardTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.leaderboardTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: GSI1PK
+            AttributeType: S
+          - AttributeName: GSI1SK
+            AttributeType: N
+          - AttributeName: GSI2PK
+            AttributeType: S
+          - AttributeName: GSI2SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - AttributeName: GSI1PK
+                KeyType: HASH
+              - AttributeName: GSI1SK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: GSI2
+            KeySchema:
+              - AttributeName: GSI2PK
+                KeyType: HASH
+              - AttributeName: GSI2SK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
