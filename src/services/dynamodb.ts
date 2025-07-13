@@ -273,4 +273,69 @@ export class DynamoDBService {
       throw new Error('Failed to get players around rank');
     }
   }
+
+  /**
+   * Get players around a specific user's rank (for context queries)
+   */
+  async getPlayersAroundUserRank(
+    gameId: string,
+    userId: string,
+    contextSize: number = 5,
+    timeFrame?: string
+  ): Promise<LeaderboardEntry[]> {
+    try {
+      const leaderboardTimeFrame = timeFrame || TimeFrameUtils.getCurrentWeek();
+      const pk = KeyPatterns.leaderboardPK(gameId, leaderboardTimeFrame);
+
+      // First get the user's score to determine the range
+      const userEntry = await this.getUserScore(gameId, userId, leaderboardTimeFrame);
+      if (!userEntry) {
+        return [];
+      }
+
+      // Get players with scores around the user's score
+      // We'll get players with higher scores and lower scores
+      const higherScoresResult = await this.client.send(new QueryCommand({
+        TableName: this.tableName,
+        IndexName: 'RankIndex',
+        KeyConditionExpression: 'PK = :pk AND Score >= :userScore',
+        ExpressionAttributeValues: {
+          ':pk': pk,
+          ':userScore': userEntry.Score
+        },
+        ScanIndexForward: false, // Sort by score descending
+        Limit: contextSize + 1 // +1 to include the user
+      }));
+
+      const lowerScoresResult = await this.client.send(new QueryCommand({
+        TableName: this.tableName,
+        IndexName: 'RankIndex',
+        KeyConditionExpression: 'PK = :pk AND Score < :userScore',
+        ExpressionAttributeValues: {
+          ':pk': pk,
+          ':userScore': userEntry.Score
+        },
+        ScanIndexForward: false, // Sort by score descending
+        Limit: contextSize
+      }));
+
+      // Combine and sort all results
+      const allPlayers = [
+        ...(higherScoresResult.Items as LeaderboardEntry[] || []),
+        ...(lowerScoresResult.Items as LeaderboardEntry[] || [])
+      ];
+
+      // Sort by score descending and remove duplicates
+      const uniquePlayers = allPlayers
+        .filter((player, index, self) =>
+          index === self.findIndex(p => p.UserID === player.UserID)
+        )
+        .sort((a, b) => b.Score - a.Score);
+
+      return uniquePlayers;
+    } catch (error) {
+      console.error('Error getting players around user rank:', error);
+      throw new Error('Failed to get players around user rank');
+    }
+  }
 }

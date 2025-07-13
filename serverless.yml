@@ -126,7 +126,7 @@ functions:
 
   getUserRank:
     handler: src/handlers/getUserRank.handler
-    description: Get a user's rank and surrounding players
+    description: Get a user's rank and surrounding players for a specific leaderboard
     events:
       - http:
           path: /leaderboard/{gameId}/user/{userId}/rank
@@ -141,9 +141,25 @@ functions:
                 timeFrame: false
                 contextSize: false
 
+  getUserRankAll:
+    handler: src/handlers/getUserRank.handler
+    description: Get all leaderboards a user participates in (UserIndex GSI demo)
+    events:
+      - http:
+          path: /user/{userId}/rank
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                userId: true
+              querystrings:
+                timeFrame: false
+                contextSize: false
+
   getUserPercentile:
     handler: src/handlers/getUserPercentile.handler
-    description: Get a user's percentile ranking
+    description: Get a user's percentile ranking for a specific leaderboard
     events:
       - http:
           path: /leaderboard/{gameId}/user/{userId}/percentile
@@ -156,6 +172,51 @@ functions:
                 userId: true
               querystrings:
                 timeFrame: false
+
+  getUserPercentileMulti:
+    handler: src/handlers/getUserPercentile.handlerMultiTimeFrame
+    description: Get user's percentile across multiple time frames
+    events:
+      - http:
+          path: /user/{userId}/percentile
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                userId: true
+              querystrings:
+                gameId: true
+                timeFrames: false
+
+  getUserScores:
+    handler: src/handlers/getUserScores.handler
+    description: Get all scores for a user across all leaderboards (UserIndex GSI)
+    events:
+      - http:
+          path: /user/{userId}/scores
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                userId: true
+              querystrings:
+                gameId: false
+                timeFrame: false
+
+  getUserBestScores:
+    handler: src/handlers/getUserScores.handlerBestScores
+    description: Get user's best scores across all games
+    events:
+      - http:
+          path: /user/{userId}/best-scores
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                userId: true
 
 resources:
   Resources:

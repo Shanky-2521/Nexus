@@ -186,20 +186,201 @@ curl "https://api.example.com/dev/leaderboard/CyberClash/top/10?timeFrame=2025-0
 curl "https://api.example.com/dev/leaderboard/CyberClash/2025-07-13/top/5"
 ```
 
-### 3. Get User Rank (Coming Soon)
+### 3. Get User Rank
 
-Retrieve a specific user's rank and surrounding players.
+Retrieve a specific user's rank and surrounding players for a leaderboard.
 
+#### Specific Leaderboard
 ```
 GET /leaderboard/{gameId}/user/{userId}/rank
 ```
 
-### 4. Get User Percentile (Coming Soon)
+**Path Parameters:**
+- `gameId` (string, required): Unique identifier for the game
+- `userId` (string, required): Unique identifier for the user
+
+**Query Parameters:**
+- `timeFrame` (string, optional): Specific time frame for the leaderboard
+- `contextSize` (number, optional): Number of players above/below to include (default: 5, max: 20)
+
+**Response:**
+```json
+{
+  "GameID": "CyberClash",
+  "TimeFrame": "2025-W28",
+  "PlayerContext": {
+    "Player": {
+      "UserID": "player123",
+      "PlayerName": "CyberNinja",
+      "Score": 2500,
+      "Rank": 15,
+      "TotalPlayers": 150,
+      "Percentile": 90
+    },
+    "PlayersAbove": [
+      {
+        "UserID": "player001",
+        "PlayerName": "TopPlayer",
+        "Score": 2600,
+        "Rank": 14,
+        "TotalPlayers": 150,
+        "Percentile": 91
+      }
+    ],
+    "PlayersBelow": [
+      {
+        "UserID": "player456",
+        "PlayerName": "NextPlayer",
+        "Score": 2400,
+        "Rank": 16,
+        "TotalPlayers": 150,
+        "Percentile": 89
+      }
+    ]
+  }
+}
+```
+
+#### All Leaderboards (UserIndex GSI Demo)
+```
+GET /user/{userId}/rank
+```
+
+**Path Parameters:**
+- `userId` (string, required): Unique identifier for the user
+
+**Response:**
+```json
+{
+  "UserID": "player123",
+  "Leaderboards": [
+    {
+      "GameID": "CyberClash",
+      "TimeFrame": "2025-W28",
+      "Score": 2500,
+      "Rank": 15,
+      "TotalPlayers": 150,
+      "Percentile": 90
+    }
+  ],
+  "TotalLeaderboards": 3,
+  "LastUpdated": "2025-07-13T10:30:00Z"
+}
+```
+
+### 4. Get User Percentile
 
 Calculate and retrieve a user's percentile ranking.
 
+#### Specific Leaderboard
 ```
 GET /leaderboard/{gameId}/user/{userId}/percentile
+```
+
+**Path Parameters:**
+- `gameId` (string, required): Unique identifier for the game
+- `userId` (string, required): Unique identifier for the user
+
+**Query Parameters:**
+- `timeFrame` (string, optional): Specific time frame for the leaderboard
+
+**Response:**
+```json
+{
+  "GameID": "CyberClash",
+  "TimeFrame": "2025-W28",
+  "UserID": "player123",
+  "PlayerName": "CyberNinja",
+  "Score": 2500,
+  "Percentile": 90,
+  "Rank": 15,
+  "TotalPlayers": 150,
+  "PercentileBand": "Top 10%"
+}
+```
+
+#### Multiple Time Frames
+```
+GET /user/{userId}/percentile?gameId={gameId}&timeFrames=weekly,monthly,all-time
+```
+
+**Path Parameters:**
+- `userId` (string, required): Unique identifier for the user
+
+**Query Parameters:**
+- `gameId` (string, required): Unique identifier for the game
+- `timeFrames` (string, optional): Comma-separated list of time frames
+
+### 5. Get User Scores (UserIndex GSI)
+
+Retrieve all scores for a user across all leaderboards. This endpoint demonstrates the power of the UserIndex GSI for efficient cross-leaderboard queries.
+
+```
+GET /user/{userId}/scores
+```
+
+**Path Parameters:**
+- `userId` (string, required): Unique identifier for the user
+
+**Query Parameters:**
+- `gameId` (string, optional): Filter by specific game
+- `timeFrame` (string, optional): Filter by specific time frame
+
+**Response:**
+```json
+{
+  "UserID": "player123",
+  "Summary": {
+    "TotalGames": 3,
+    "TotalLeaderboards": 5,
+    "AverageRank": 12,
+    "AveragePercentile": 88,
+    "BestRank": 5,
+    "BestPercentile": 95
+  },
+  "LeaderboardsByGame": {
+    "CyberClash": [
+      {
+        "GameID": "CyberClash",
+        "TimeFrame": "2025-W28",
+        "Score": 2500,
+        "Rank": 15,
+        "Percentile": 90
+      }
+    ]
+  },
+  "AllLeaderboards": [...],
+  "LastUpdated": "2025-07-13T10:30:00Z"
+}
+```
+
+### 6. Get User Best Scores
+
+Retrieve a user's best score for each game they play.
+
+```
+GET /user/{userId}/best-scores
+```
+
+**Path Parameters:**
+- `userId` (string, required): Unique identifier for the user
+
+**Response:**
+```json
+{
+  "UserID": "player123",
+  "BestScores": [
+    {
+      "GameID": "CyberClash",
+      "TimeFrame": "2025-07-13",
+      "Score": 3000,
+      "Rank": 5,
+      "Percentile": 95
+    }
+  ],
+  "TotalGames": 3,
+  "LastUpdated": "2025-07-13T10:30:00Z"
+}
 ```
 
 ## Time Frame Formats
